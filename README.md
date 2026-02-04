@@ -37,90 +37,19 @@ make help      # Show all available commands
 | Tesseract OCR | 9090 | http://localhost:9090 |
 | YOLOv8 | 9091 | http://localhost:9091 |
 
-## Manual Setup
+## Repository Structure
 
-### 1. Install Label Studio
-
-```bash
-uv venv .venv
-source .venv/bin/activate
-uv pip install label-studio
 ```
-
-### 2. Clone ML Backend Repository
-
-```bash
-git clone https://github.com/HumanSignal/label-studio-ml-backend.git
-```
-
-### 3. Setup Tesseract OCR Backend (Podman)
-
-```bash
-podman pull docker.io/heartexlabs/label-studio-ml-backend:tesseract-master
-
-mkdir -p data/tesseract
-
-# Linux/WSL
-podman run -d \
-  --name tesseract \
-  --network=host \
-  -e LOG_LEVEL=DEBUG \
-  -e LABEL_STUDIO_HOST=http://localhost:8080 \
-  -v ./data/tesseract:/data:Z \
-  docker.io/heartexlabs/label-studio-ml-backend:tesseract-master
-
-# macOS (use port mapping instead of host network)
-podman run -d \
-  --name tesseract \
-  -p 9090:9090 \
-  -e LOG_LEVEL=DEBUG \
-  -e LABEL_STUDIO_HOST=http://host.containers.internal:8080 \
-  -v ./data/tesseract:/data:Z \
-  docker.io/heartexlabs/label-studio-ml-backend:tesseract-master
-```
-
-### 4. Setup YOLOv8 Backend (Native Python)
-
-```bash
-cd label-studio-ml-backend/label_studio_ml/examples/yolo
-
-uv venv .venv
-source .venv/bin/activate
-
-uv pip install \
-  gunicorn \
-  ultralytics \
-  tqdm \
-  "torchmetrics<1.8.0" \
-  "label-studio-ml @ git+https://github.com/HumanSignal/label-studio-ml-backend.git@master" \
-  "label-studio-sdk @ git+https://github.com/HumanSignal/label-studio-sdk.git"
-
-mkdir -p data/server models cache_dir
-```
-
-## Running Services Manually
-
-### Start Label Studio
-
-```bash
-source .venv/bin/activate
-label-studio start --port 8080
-```
-
-### Start Tesseract
-
-```bash
-podman start tesseract
-```
-
-### Start YOLOv8
-
-```bash
-cd label-studio-ml-backend/label_studio_ml/examples/yolo
-source .venv/bin/activate
-LABEL_STUDIO_HOST=http://localhost:8080 \
-PYTHONPATH=$(pwd) \
-gunicorn --bind :9091 --workers 1 --threads 4 --timeout 0 _wsgi:app
+labelstudio-local/
+├── Makefile                    # Build/run commands
+├── README.md                   # This file
+├── SETUP.md                    # Detailed setup notes
+├── label-studio-ml-backend/    # ML backend code (included)
+│   └── label_studio_ml/
+│       └── examples/
+│           ├── tesseract/      # Tesseract OCR backend
+│           └── yolo/           # YOLOv8 backend
+└── data/                       # Runtime data (gitignored)
 ```
 
 ## Connecting ML Backends in Label Studio
@@ -177,22 +106,13 @@ First startup takes 1-2 minutes for database initialization.
 
 ```bash
 make health
-# or manually:
-curl http://localhost:8080        # Label Studio (302 = OK)
-curl http://localhost:9090/health # Tesseract
-curl http://localhost:9091/health # YOLO
 ```
 
 ### Podman issues
 
 ```bash
-# Check container status
-podman ps -a
-
-# View logs
-podman logs tesseract
-
-# Recreate container
-podman rm -f tesseract
-make setup-tesseract
+podman ps -a          # Check container status
+podman logs tesseract # View logs
 ```
+
+See [SETUP.md](SETUP.md) for detailed manual setup instructions.

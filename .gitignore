@@ -1,16 +1,19 @@
 # Virtual environments
 .venv/
 venv/
-*.venv/
+**/.venv/
+**/venv/
 
 # Python
 __pycache__/
 *.py[cod]
 *.egg-info/
+.eggs/
 
 # Data directories (created at runtime)
 data/
-label-studio-ml-backend/
+**/models/*.pt
+**/cache_dir/
 
 # OS files
 .DS_Store
@@ -20,3 +23,8 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/

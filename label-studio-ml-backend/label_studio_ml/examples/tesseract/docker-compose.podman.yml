@@ -1,0 +1,14 @@
+version: "3.8"
+
+services:
+  tesseract:
+    container_name: tesseract
+    image: heartexlabs/label-studio-ml-backend:tesseract-master
+    init: true
+    build:
+      context: .
+    network_mode: host
+    volumes:
+      - "./data/server:/data"
+    env_file:
+      - .env

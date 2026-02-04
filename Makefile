@@ -12,7 +12,7 @@ all: setup
 # Setup targets
 #
 
-setup: setup-labelstudio setup-ml-backend setup-tesseract setup-yolo
+setup: setup-labelstudio setup-tesseract setup-yolo
 	@echo ""
 	@echo "=== Setup Complete ==="
 	@echo "Run 'make start' to start all services"
@@ -22,15 +22,7 @@ setup-labelstudio:
 	uv venv .venv
 	. .venv/bin/activate && uv pip install label-studio
 
-setup-ml-backend:
-	@echo "=== Cloning ML Backend Repository ==="
-	@if [ ! -d "label-studio-ml-backend" ]; then \
-		git clone https://github.com/HumanSignal/label-studio-ml-backend.git; \
-	else \
-		echo "ML backend repo already exists"; \
-	fi
-
-setup-tesseract: setup-ml-backend
+setup-tesseract:
 	@echo "=== Setting up Tesseract OCR Backend ==="
 	mkdir -p data/tesseract
 	podman pull docker.io/heartexlabs/label-studio-ml-backend:tesseract-master
@@ -54,7 +46,7 @@ else
 endif
 	-podman stop tesseract
 
-setup-yolo: setup-ml-backend
+setup-yolo:
 	@echo "=== Setting up YOLOv8 Backend ==="
 	cd $(YOLO_DIR) && uv venv .venv
 	cd $(YOLO_DIR) && . .venv/bin/activate && uv pip install \
@@ -112,8 +104,9 @@ clean:
 	@echo "=== Cleaning up ==="
 	-podman rm -f tesseract 2>/dev/null
 	rm -rf .venv
-	rm -rf label-studio-ml-backend
 	rm -rf data
+	rm -rf $(YOLO_DIR)/.venv
+	rm -rf $(YOLO_DIR)/models/*.pt
 	@echo "Cleaned."
 
 help:
