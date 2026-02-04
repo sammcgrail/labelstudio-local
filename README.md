@@ -101,7 +101,62 @@ make help      # Show all commands
 </View>
 ```
 
-**YOLO Classes:** person, bicycle, car, motorcycle, airplane, bus, train, truck, boat, traffic light, fire hydrant, stop sign, parking meter, bench, bird, cat, dog, horse, sheep, cow, elephant, bear, zebra, giraffe, backpack, umbrella, handbag, tie, suitcase, frisbee, skis, snowboard, sports ball, kite, baseball bat, baseball glove, skateboard, surfboard, tennis racket, bottle, wine glass, cup, fork, knife, spoon, bowl, banana, apple, sandwich, orange, broccoli, carrot, hot dog, pizza, donut, cake, chair, couch, potted plant, bed, dining table, toilet, tv, laptop, mouse, remote, keyboard, cell phone, microwave, oven, toaster, sink, refrigerator, book, clock, vase, scissors, teddy bear, hair drier, toothbrush.
+**YOLO Classes (80 COCO):** person, bicycle, car, motorcycle, airplane, bus, train, truck, boat, traffic light, fire hydrant, stop sign, parking meter, bench, bird, cat, dog, horse, sheep, cow, elephant, bear, zebra, giraffe, backpack, umbrella, handbag, tie, suitcase, frisbee, skis, snowboard, sports ball, kite, baseball bat, baseball glove, skateboard, surfboard, tennis racket, bottle, wine glass, cup, fork, knife, spoon, bowl, banana, apple, sandwich, orange, broccoli, carrot, hot dog, pizza, donut, cake, chair, couch, potted plant, bed, dining table, toilet, tv, laptop, mouse, remote, keyboard, cell phone, microwave, oven, toaster, sink, refrigerator, book, clock, vase, scissors, teddy bear, hair drier, toothbrush.
+
+## How YOLO Model Selection Works
+
+The YOLO backend uses the [ultralytics](https://github.com/ultralytics/ultralytics) library, which supports multiple YOLO versions through a unified API. You specify which model to use via the `model_path` attribute in your labeling config.
+
+### Included Model
+
+- `yolo11n.pt` - YOLO11 nano (5.6MB, fastest) - **included in repo**
+
+### Using Different Models
+
+Add `model_path` to your `<RectangleLabels>` tag:
+
+```xml
+<!-- YOLO11 (default, included) -->
+<RectangleLabels name="label" toName="image" model_path="yolo11n.pt">
+
+<!-- YOLOv8 variants -->
+<RectangleLabels name="label" toName="image" model_path="yolov8n.pt">
+<RectangleLabels name="label" toName="image" model_path="yolov8s.pt">
+<RectangleLabels name="label" toName="image" model_path="yolov8m.pt">
+
+<!-- YOLO11 variants -->
+<RectangleLabels name="label" toName="image" model_path="yolo11n.pt">
+<RectangleLabels name="label" toName="image" model_path="yolo11s.pt">
+<RectangleLabels name="label" toName="image" model_path="yolo11m.pt">
+```
+
+### Model Naming
+
+| Version | Naming | Example |
+|---------|--------|---------|
+| YOLOv5 | `yolov5{size}u.pt` | `yolov5nu.pt` |
+| YOLOv8 | `yolov8{size}.pt` | `yolov8n.pt` |
+| YOLO11 | `yolo11{size}.pt` | `yolo11n.pt` (no "v"!) |
+
+Sizes: `n` (nano), `s` (small), `m` (medium), `l` (large), `x` (xlarge)
+
+### Task-Specific Models
+
+```xml
+<!-- Object Detection (default) -->
+<RectangleLabels model_path="yolo11n.pt">
+
+<!-- Segmentation -->
+<PolygonLabels model_path="yolo11n-seg.pt">
+
+<!-- Pose Estimation -->
+<KeypointLabels model_path="yolo11n-pose.pt">
+
+<!-- Classification -->
+<Choices model_path="yolo11n-cls.pt">
+```
+
+Models are auto-downloaded on first use if not present in the `models/` directory.
 
 ---
 
@@ -226,5 +281,7 @@ labelstudio-local/
 │   └── label_studio_ml/examples/
 │       ├── tesseract/
 │       └── yolo/
+│           └── models/
+│               └── yolo11n.pt  ← included
 └── data/  (created at runtime)
 ```
