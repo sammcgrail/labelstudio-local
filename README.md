@@ -36,7 +36,7 @@ cd labelstudio-local
 | Tesseract OCR | 9090 | http://localhost:9090 |
 | YOLO (v8/v11) | 9091 | http://localhost:9091 |
 
-> **Note:** YOLO11n model (5.6MB) is included. Supports YOLO and YOLO11 models.
+> **Included models:** `yolo11n.pt` (5.4MB) and `yolov8n.pt` (6.3MB) - ready to use.
 
 ## Commands
 
@@ -107,9 +107,10 @@ make help      # Show all commands
 
 The YOLO backend uses the [ultralytics](https://github.com/ultralytics/ultralytics) library, which supports multiple YOLO versions through a unified API. You specify which model to use via the `model_path` attribute in your labeling config.
 
-### Included Model
+### Included Models
 
-- `yolo11n.pt` - YOLO11 nano (5.6MB, fastest) - **included in repo**
+- `yolo11n.pt` - YOLO11 nano (5.4MB) - **included**
+- `yolov8n.pt` - YOLOv8 nano (6.3MB) - **included**
 
 ### Using Different Models
 
@@ -282,6 +283,7 @@ labelstudio-local/
 │       ├── tesseract/
 │       └── yolo/
 │           └── models/
-│               └── yolo11n.pt  ← included
+│               ├── yolo11n.pt  ← included
+│               └── yolov8n.pt  ← included
 └── data/  (created at runtime)
 ```
