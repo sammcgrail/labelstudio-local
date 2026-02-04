@@ -1,0 +1,22 @@
+# Virtual environments
+.venv/
+venv/
+*.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Data directories (created at runtime)
+data/
+label-studio-ml-backend/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
