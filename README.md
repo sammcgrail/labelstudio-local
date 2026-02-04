@@ -7,19 +7,26 @@ Local Label Studio installation with Tesseract OCR and YOLOv8 ML backends.
 - Python 3.12+
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) - `curl -LsSf https://astral.sh/uv/install.sh | sh`
 - [Podman](https://podman.io/docs/installation) - container runtime
+- make
 
 ## Quick Start
 
 ```bash
-# Clone this repo
 git clone https://github.com/sammcgrail/labelstudio-local.git
 cd labelstudio-local
+make setup
+make start
+```
 
-# Run setup
-./scripts/setup.sh
+## Commands
 
-# Start all services
-./scripts/start.sh
+```bash
+make setup     # Install everything (Label Studio, Tesseract, YOLO)
+make start     # Start all services
+make stop      # Stop all services
+make health    # Check service status
+make clean     # Remove all installed components
+make help      # Show all available commands
 ```
 
 ## Services
@@ -53,11 +60,21 @@ podman pull docker.io/heartexlabs/label-studio-ml-backend:tesseract-master
 
 mkdir -p data/tesseract
 
+# Linux/WSL
 podman run -d \
   --name tesseract \
   --network=host \
   -e LOG_LEVEL=DEBUG \
   -e LABEL_STUDIO_HOST=http://localhost:8080 \
+  -v ./data/tesseract:/data:Z \
+  docker.io/heartexlabs/label-studio-ml-backend:tesseract-master
+
+# macOS (use port mapping instead of host network)
+podman run -d \
+  --name tesseract \
+  -p 9090:9090 \
+  -e LOG_LEVEL=DEBUG \
+  -e LABEL_STUDIO_HOST=http://host.containers.internal:8080 \
   -v ./data/tesseract:/data:Z \
   docker.io/heartexlabs/label-studio-ml-backend:tesseract-master
 ```
@@ -81,7 +98,7 @@ uv pip install \
 mkdir -p data/server models cache_dir
 ```
 
-## Running Services
+## Running Services Manually
 
 ### Start Label Studio
 
@@ -104,20 +121,6 @@ source .venv/bin/activate
 LABEL_STUDIO_HOST=http://localhost:8080 \
 PYTHONPATH=$(pwd) \
 gunicorn --bind :9091 --workers 1 --threads 4 --timeout 0 _wsgi:app
-```
-
-## Stop Services
-
-```bash
-./scripts/stop.sh
-```
-
-Or manually:
-
-```bash
-pkill -f "label-studio"
-podman stop tesseract
-pkill -f "gunicorn.*9091"
 ```
 
 ## Connecting ML Backends in Label Studio
@@ -170,23 +173,26 @@ YOLOv8 supports 80 COCO classes: person, bicycle, car, motorcycle, airplane, bus
 ### Label Studio slow to start
 First startup takes 1-2 minutes for database initialization.
 
-### macOS Podman networking
-If `--network=host` doesn't work on macOS, use port mapping instead:
-
-```bash
-podman run -d \
-  --name tesseract \
-  -p 9090:9090 \
-  -e LOG_LEVEL=DEBUG \
-  -e LABEL_STUDIO_HOST=http://host.containers.internal:8080 \
-  -v ./data/tesseract:/data:Z \
-  docker.io/heartexlabs/label-studio-ml-backend:tesseract-master
-```
-
 ### Check service health
 
 ```bash
+make health
+# or manually:
 curl http://localhost:8080        # Label Studio (302 = OK)
 curl http://localhost:9090/health # Tesseract
 curl http://localhost:9091/health # YOLO
+```
+
+### Podman issues
+
+```bash
+# Check container status
+podman ps -a
+
+# View logs
+podman logs tesseract
+
+# Recreate container
+podman rm -f tesseract
+make setup-tesseract
 ```
