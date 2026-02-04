@@ -12,7 +12,9 @@ __pycache__/
 
 # Data directories (created at runtime)
 data/
+# Ignore large model files except yolo11n (included)
 **/models/*.pt
+!**/models/yolo11n.pt
 **/cache_dir/
 
 # OS files
