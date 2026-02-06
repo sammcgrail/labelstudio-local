@@ -25,3 +25,19 @@ if echo "$HEALTH" | grep -q '"status":"UP"'; then
 else
     echo "DOWN"
 fi
+
+echo -n "EasyOCR (9092):      "
+HEALTH=$(curl -s http://localhost:9092/health 2>/dev/null)
+if echo "$HEALTH" | grep -q '"status":"UP"'; then
+    echo "OK"
+else
+    echo "DOWN"
+fi
+
+echo -n "MobileSAM (9093):    "
+HEALTH=$(curl -s http://localhost:9093/health 2>/dev/null)
+if echo "$HEALTH" | grep -q '"status":"UP"'; then
+    echo "OK"
+else
+    echo "DOWN"
+fi

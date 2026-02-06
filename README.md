@@ -30,11 +30,13 @@ cd labelstudio-local
 
 ## Services
 
-| Service | Port | URL |
-|---------|------|-----|
-| Label Studio | 8080 | http://localhost:8080 |
-| Tesseract OCR | 9090 | http://localhost:9090 |
-| YOLO (v8/v11) | 9091 | http://localhost:9091 |
+| Service | Port | Type | Install |
+|---------|------|------|---------|
+| Label Studio | 8080 | Web UI | `make setup` |
+| Tesseract OCR | 9090 | Container (Podman) | `make setup` |
+| YOLO (v8/v11) | 9091 | Native Python | `make setup` |
+| EasyOCR | 9092 | Container (Podman) | `make extras` |
+| MobileSAM | 9093 | Native Python | `make extras` |
 
 > **Included models:** `yolo11n.pt` (5.4MB) and `yolov8n.pt` (6.3MB) - ready to use.
 
@@ -43,12 +45,17 @@ cd labelstudio-local
 ### Make (macOS/Linux)
 
 ```bash
-make setup     # Install everything
-make start     # Start all services
+make setup     # Install core (Label Studio, Tesseract, YOLO)
+make start     # Start core services
 make stop      # Stop all services
 make health    # Check service status
 make clean     # Remove installed components
 make help      # Show all commands
+
+# Extra ML backends
+make extras        # Install EasyOCR + MobileSAM
+make start-easyocr # Start EasyOCR (port 9092)
+make start-sam     # Start MobileSAM (port 9093)
 ```
 
 ### Bash Scripts (WSL/Linux)
@@ -100,6 +107,44 @@ make help      # Show all commands
   </RectangleLabels>
 </View>
 ```
+
+### EasyOCR (extras)
+
+Better multilingual OCR than Tesseract. Supports 80+ languages.
+
+```xml
+<View>
+  <Image name="image" value="$image" zoom="true" zoomControl="true"/>
+  <PolygonLabels name="label" toName="image" strokeWidth="2" smart="true">
+    <Label value="Text" background="green"/>
+  </PolygonLabels>
+  <TextArea name="transcription" toName="image" editable="true"
+            perRegion="true" required="false" maxSubmissions="1"
+            rows="5" placeholder="Recognized Text"
+            displayMode="region-list"/>
+</View>
+```
+
+Configure languages via `LANG_LIST` env var (default: `en`). Set to `en,fr,de` etc.
+
+### MobileSAM - Interactive Segmentation (extras)
+
+Click or draw a rectangle to segment any object. No predefined classes needed.
+
+```xml
+<View>
+  <Image name="image" value="$image" zoom="true" zoomControl="true"/>
+  <BrushLabels name="label" toName="image">
+    <Label value="Object" background="green"/>
+  </BrushLabels>
+  <KeyPointLabels name="kp" toName="image" smart="true">
+    <Label value="Positive" background="green"/>
+    <Label value="Negative" background="red"/>
+  </KeyPointLabels>
+</View>
+```
+
+> MobileSAM is interactive only - click keypoints or draw rectangles to guide segmentation. It does not auto-label in batch mode.
 
 **YOLO Classes (80 COCO):** person, bicycle, car, motorcycle, airplane, bus, train, truck, boat, traffic light, fire hydrant, stop sign, parking meter, bench, bird, cat, dog, horse, sheep, cow, elephant, bear, zebra, giraffe, backpack, umbrella, handbag, tie, suitcase, frisbee, skis, snowboard, sports ball, kite, baseball bat, baseball glove, skateboard, surfboard, tennis racket, bottle, wine glass, cup, fork, knife, spoon, bowl, banana, apple, sandwich, orange, broccoli, carrot, hot dog, pizza, donut, cake, chair, couch, potted plant, bed, dining table, toilet, tv, laptop, mouse, remote, keyboard, cell phone, microwave, oven, toaster, sink, refrigerator, book, clock, vase, scissors, teddy bear, hair drier, toothbrush.
 
