@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-.PHONY: setup setup-labelstudio setup-tesseract setup-yolo start stop health clean extras setup-easyocr setup-sam start-easyocr start-sam
+.PHONY: setup setup-labelstudio setup-tesseract setup-yolo start stop health clean extras setup-easyocr setup-sam setup-sam2 start-easyocr start-sam start-sam2
 
 # Detect OS
 UNAME_S := $(shell uname -s)
@@ -8,6 +8,8 @@ EXAMPLES_DIR := $(ROOT_DIR)/label-studio-ml-backend/label_studio_ml/examples
 YOLO_DIR := $(EXAMPLES_DIR)/yolo
 EASYOCR_DIR := $(EXAMPLES_DIR)/easyocr
 SAM_DIR := $(EXAMPLES_DIR)/segment_anything_model
+SAM2_DIR := $(EXAMPLES_DIR)/segment_anything_2_image
+SAM2_REPO := $(ROOT_DIR)/sam2
 
 # Default target
 all: setup
@@ -89,6 +91,7 @@ start-labelstudio:
 	@echo "  Extras (if installed via 'make extras'):"
 	@echo "  EasyOCR:      http://localhost:9092  (make start-easyocr)"
 	@echo "  MobileSAM:    http://localhost:9093  (make start-sam)"
+	@echo "  SAM2:         http://localhost:9094  (make start-sam2) [GPU]"
 	@echo ""
 	. .venv/bin/activate && label-studio start --port 8080
 
@@ -110,17 +113,19 @@ stop:
 	-podman stop easyocr 2>/dev/null || true
 	-pkill -f "gunicorn.*9091" 2>/dev/null || true
 	-pkill -f "gunicorn.*9093" 2>/dev/null || true
+	-pkill -f "gunicorn.*9094" 2>/dev/null || true
 	@echo "All services stopped."
 
 #
 # Extras - additional ML backends (EasyOCR, MobileSAM)
 #
 
-extras: setup-ml-backend setup-easyocr setup-sam
+extras: setup-ml-backend setup-easyocr setup-sam setup-sam2
 	@echo ""
 	@echo "=== Extras Setup Complete ==="
 	@echo "  EasyOCR:   make start-easyocr  (port 9092)"
 	@echo "  MobileSAM: make start-sam      (port 9093)"
+	@echo "  SAM2:      make start-sam2     (port 9094) [GPU required]"
 
 setup-easyocr:
 	@echo "=== Setting up EasyOCR Backend ==="
@@ -180,6 +185,45 @@ start-sam:
 		PYTHONPATH=$(SAM_DIR) \
 		gunicorn --bind :9093 --workers 1 --threads 4 --timeout 0 _wsgi:app &
 
+setup-sam2:
+	@echo "=== Setting up SAM2 Backend (requires GPU: NVIDIA CUDA or Apple MPS) ==="
+	@if [ ! -d "$(SAM2_REPO)" ]; then \
+		git clone --depth 1 --branch main --single-branch https://github.com/facebookresearch/sam2.git $(SAM2_REPO); \
+	else \
+		echo "sam2 repo already exists"; \
+	fi
+	cd $(SAM2_REPO) && uv venv .venv
+	cd $(SAM2_REPO) && . .venv/bin/activate && uv pip install \
+		-e . \
+		gunicorn \
+		"label-studio-ml @ git+https://github.com/HumanSignal/label-studio-ml-backend.git@master" \
+		"label-studio-sdk @ git+https://github.com/HumanSignal/label-studio-sdk.git"
+	@echo "Downloading SAM2 checkpoints..."
+	cd $(SAM2_REPO)/checkpoints && bash download_ckpts.sh
+	mkdir -p $(SAM2_DIR)/data
+
+start-sam2:
+	@echo "Starting SAM2 (port 9094, GPU)..."
+ifeq ($(UNAME_S),Darwin)
+	cd $(SAM2_REPO) && . .venv/bin/activate && \
+		DEVICE=mps \
+		MODEL_CONFIG=configs/sam2.1/sam2.1_hiera_l.yaml \
+		MODEL_CHECKPOINT=sam2.1_hiera_large.pt \
+		LABEL_STUDIO_HOST=http://localhost:8080 \
+		PYTHONPATH=$(SAM2_DIR) \
+		gunicorn --bind :9094 --workers 1 --threads 4 --timeout 0 \
+			--pythonpath $(SAM2_DIR) _wsgi:app &
+else
+	cd $(SAM2_REPO) && . .venv/bin/activate && \
+		DEVICE=cuda \
+		MODEL_CONFIG=configs/sam2.1/sam2.1_hiera_l.yaml \
+		MODEL_CHECKPOINT=sam2.1_hiera_large.pt \
+		LABEL_STUDIO_HOST=http://localhost:8080 \
+		PYTHONPATH=$(SAM2_DIR) \
+		gunicorn --bind :9094 --workers 1 --threads 4 --timeout 0 \
+			--pythonpath $(SAM2_DIR) _wsgi:app &
+endif
+
 #
 # Utility targets
 #
@@ -197,6 +241,8 @@ health:
 	if curl -s http://localhost:9092/health 2>/dev/null | grep -q '"status":"UP"'; then echo "OK"; else echo "DOWN"; fi
 	@echo -n "MobileSAM (9093): "; \
 	if curl -s http://localhost:9093/health 2>/dev/null | grep -q '"status":"UP"'; then echo "OK"; else echo "DOWN"; fi
+	@echo -n "SAM2 (9094): "; \
+	if curl -s http://localhost:9094/health 2>/dev/null | grep -q '"status":"UP"'; then echo "OK"; else echo "DOWN"; fi
 
 clean:
 	@echo "=== Cleaning up ==="
@@ -207,6 +253,7 @@ clean:
 	rm -rf $(YOLO_DIR)/.venv
 	rm -rf $(YOLO_DIR)/models/*.pt
 	rm -rf $(SAM_DIR)/.venv
+	rm -rf $(SAM2_REPO)
 	@echo "Cleaned."
 
 help:
@@ -229,7 +276,21 @@ help:
 	@echo "  make start-tesseract    - Start Tesseract only"
 	@echo "  make start-yolo         - Start YOLO only"
 	@echo ""
-	@echo "Extras (additional ML backends):"
-	@echo "  make extras             - Install EasyOCR + MobileSAM"
+	@echo "Extras (install individually or all at once):"
+	@echo "  make extras             - Install all extras (EasyOCR, MobileSAM, SAM2)"
+	@echo "  make easyocr            - Install + start EasyOCR (port 9092)"
+	@echo "  make mobilesam          - Install + start MobileSAM (port 9093)"
+	@echo "  make sam2               - Install + start SAM2 (port 9094) [GPU required]"
+	@echo ""
+	@echo "Start extras individually:"
 	@echo "  make start-easyocr      - Start EasyOCR (port 9092)"
 	@echo "  make start-sam          - Start MobileSAM (port 9093)"
+	@echo "  make start-sam2         - Start SAM2 (port 9094) [GPU required]"
+
+#
+# Shorthand aliases: make easyocr, make mobilesam, make sam2
+#
+
+easyocr: setup-ml-backend setup-easyocr start-easyocr
+mobilesam: setup-ml-backend setup-sam start-sam
+sam2: setup-ml-backend setup-sam2 start-sam2

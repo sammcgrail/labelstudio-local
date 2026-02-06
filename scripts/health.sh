@@ -41,3 +41,11 @@ if echo "$HEALTH" | grep -q '"status":"UP"'; then
 else
     echo "DOWN"
 fi
+
+echo -n "SAM2 (9094):         "
+HEALTH=$(curl -s http://localhost:9094/health 2>/dev/null)
+if echo "$HEALTH" | grep -q '"status":"UP"'; then
+    echo "OK"
+else
+    echo "DOWN"
+fi

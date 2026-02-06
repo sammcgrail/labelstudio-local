@@ -17,4 +17,7 @@ podman stop easyocr 2>/dev/null || echo "EasyOCR not running"
 echo "Stopping MobileSAM..."
 pkill -f "gunicorn.*9093" 2>/dev/null || echo "MobileSAM not running"
 
+echo "Stopping SAM2..."
+pkill -f "gunicorn.*9094" 2>/dev/null || echo "SAM2 not running"
+
 echo "All services stopped."

@@ -30,13 +30,23 @@ cd labelstudio-local
 
 ## Services
 
-| Service | Port | Type | Install |
-|---------|------|------|---------|
-| Label Studio | 8080 | Web UI | `make setup` |
-| Tesseract OCR | 9090 | Container (Podman) | `make setup` |
-| YOLO (v8/v11) | 9091 | Native Python | `make setup` |
-| EasyOCR | 9092 | Container (Podman) | `make extras` |
-| MobileSAM | 9093 | Native Python | `make extras` |
+### Core (make setup)
+
+| Service | Port | Type | Platform |
+|---------|------|------|----------|
+| Label Studio | 8080 | Web UI | All |
+| Tesseract OCR | 9090 | Container (Podman) | All |
+| YOLO (v8/v11) | 9091 | Native Python | All |
+
+### Extras (make extras, or install individually)
+
+| Service | Port | Type | Platform | Install individually |
+|---------|------|------|----------|---------------------|
+| EasyOCR | 9092 | Container (Podman) | All | `make easyocr` |
+| MobileSAM | 9093 | Native Python (CPU) | All | `make mobilesam` |
+| SAM2 | 9094 | Native Python (GPU) | Linux/WSL (CUDA), macOS (MPS) | `make sam2` |
+
+> SAM2 requires a GPU. On Linux/WSL it uses NVIDIA CUDA. On macOS it uses Apple Metal (MPS) — works on M1/M2/M3/M4 chips. Not available on CPU-only systems.
 
 > **Included models:** `yolo11n.pt` (5.4MB) and `yolov8n.pt` (6.3MB) - ready to use.
 
@@ -53,9 +63,13 @@ make clean     # Remove installed components
 make help      # Show all commands
 
 # Extra ML backends
-make extras        # Install EasyOCR + MobileSAM
+make extras        # Install all extras (EasyOCR, MobileSAM, SAM2)
+make easyocr       # Install + start EasyOCR (port 9092)
+make mobilesam     # Install + start MobileSAM (port 9093)
+make sam2          # Install + start SAM2 (port 9094) [GPU]
 make start-easyocr # Start EasyOCR (port 9092)
 make start-sam     # Start MobileSAM (port 9093)
+make start-sam2    # Start SAM2 (port 9094) [GPU]
 ```
 
 ### Bash Scripts (WSL/Linux)
@@ -145,6 +159,25 @@ Click or draw a rectangle to segment any object. No predefined classes needed.
 ```
 
 > MobileSAM is interactive only - click keypoints or draw rectangles to guide segmentation. It does not auto-label in batch mode.
+
+### SAM2 - Segment Anything 2 (extras, GPU required)
+
+Meta's SAM2 for high-quality interactive segmentation. Requires GPU: NVIDIA CUDA on Linux/WSL, Apple MPS on macOS (M1/M2/M3/M4).
+
+```xml
+<View>
+  <Image name="image" value="$image" zoom="true" zoomControl="true"/>
+  <BrushLabels name="label" toName="image">
+    <Label value="Object" background="green"/>
+  </BrushLabels>
+  <KeyPointLabels name="kp" toName="image" smart="true">
+    <Label value="Positive" background="green"/>
+    <Label value="Negative" background="red"/>
+  </KeyPointLabels>
+</View>
+```
+
+> SAM2 requires a GPU. It uses NVIDIA CUDA on Linux/WSL and Apple Metal (MPS) on macOS. Not available on CPU-only systems.
 
 **YOLO Classes (80 COCO):** person, bicycle, car, motorcycle, airplane, bus, train, truck, boat, traffic light, fire hydrant, stop sign, parking meter, bench, bird, cat, dog, horse, sheep, cow, elephant, bear, zebra, giraffe, backpack, umbrella, handbag, tie, suitcase, frisbee, skis, snowboard, sports ball, kite, baseball bat, baseball glove, skateboard, surfboard, tennis racket, bottle, wine glass, cup, fork, knife, spoon, bowl, banana, apple, sandwich, orange, broccoli, carrot, hot dog, pizza, donut, cake, chair, couch, potted plant, bed, dining table, toilet, tv, laptop, mouse, remote, keyboard, cell phone, microwave, oven, toaster, sink, refrigerator, book, clock, vase, scissors, teddy bear, hair drier, toothbrush.
 
