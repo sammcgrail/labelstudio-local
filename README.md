@@ -1,6 +1,6 @@
 # Label Studio Local Setup
 
-Local Label Studio with Tesseract OCR and YOLO ML backends.
+Local Label Studio with Tesseract OCR, YOLO, EasyOCR, MobileSAM, and SAM2 ML backends. Includes example images and step-by-step usage guide.
 
 ## Quick Start
 
@@ -239,6 +239,303 @@ Models are auto-downloaded on first use if not present in the `models/` director
 
 ---
 
+## Usage Guide
+
+This section walks through creating projects, importing images, connecting ML backends, and using auto-labeling and interactive annotation tools.
+
+### First Launch
+
+1. Run `make start` (or `./scripts/start.sh`)
+2. Wait 1-2 minutes for Label Studio to initialize
+3. Open **http://localhost:8080** in Chrome (recommended browser)
+4. Create an account (first user becomes admin, data is local only)
+5. You're now on the Projects page
+
+### Example Images
+
+The `examples/images/` folder contains test images for each ML backend:
+
+| Image | Best For | What to Label |
+|-------|----------|---------------|
+| `street-scene.png` | YOLO | Cars, trucks, people, traffic light, stop sign |
+| `animals-park.png` | YOLO | Dog, cat, horse, bird, person, bench |
+| `shapes-objects.png` | YOLO | Apple, orange, bottle, cup, clock, keyboard, mouse, scissors, potted plant, vase, book |
+| `document-scan.png` | Tesseract / EasyOCR | Invoice text, numbers, addresses |
+| `text-sign.png` | Tesseract / EasyOCR | Sign text ("WELCOME TO CENTRAL PARK", hours, rules) |
+| `aerial-view.png` | SAM2 / MobileSAM | Buildings, roads, cars (segmentation masks) |
+
+### Step 1: Create a Project
+
+1. Click **Create Project** (top right)
+2. Enter a project name (e.g., "Object Detection Test")
+3. Skip the Data Import tab for now (we'll import after configuring)
+4. Go to the **Labeling Setup** tab
+
+### Step 2: Configure the Labeling Interface
+
+Click the **Code** button to switch to XML mode. Paste one of the labeling configurations from the [Labeling Configurations](#labeling-configurations) section above, depending on what you want to do:
+
+- **YOLO object detection** — use the YOLO config with `<RectangleLabels>` and labels for `person`, `car`, `truck`, etc.
+- **Tesseract OCR** — use the Tesseract config with `<RectangleLabels smart="true">` and `<TextArea>` for transcription
+- **EasyOCR** — use the EasyOCR config with `<PolygonLabels smart="true">`
+- **MobileSAM / SAM2 segmentation** — use the SAM config with `<BrushLabels>` and `<KeyPointLabels smart="true">`
+
+Click **Save** after pasting.
+
+> You can customize labels: add `<Label value="your_class"/>` tags for any classes you need. Use the `background` attribute to set colors (e.g., `background="#FF0000"`).
+
+### Step 3: Import Images
+
+1. Inside your project, click **Import** (top right of the Data Manager)
+2. Click **Upload Files** and select images from `examples/images/`
+3. Click **Import** to confirm
+
+The images appear in the Data Manager as tasks, one per image.
+
+> **Tip:** You can also drag and drop files, or import a folder. For production use with large datasets, use cloud storage (S3, GCS, Azure) with URL references.
+
+### Step 4: Connect an ML Backend
+
+1. Go to **Settings** (gear icon) > **Model**
+2. Click **Connect Model**
+3. Fill in:
+   - **Name:** e.g., "YOLO" or "Tesseract"
+   - **Backend URL:** the URL for your ML backend:
+
+| Backend | URL |
+|---------|-----|
+| Tesseract OCR | `http://localhost:9090` |
+| YOLO | `http://localhost:9091` |
+| EasyOCR | `http://localhost:9092` |
+| MobileSAM | `http://localhost:9093` |
+| SAM2 | `http://localhost:9094` |
+
+4. Check **Interactive preannotations** (this enables smart tools)
+5. Click **Validate and Save**
+
+If the connection succeeds, you'll see a green status. If it fails, run `make health` to check which backends are running.
+
+> You can connect multiple ML backends to the same project. For example, connect both YOLO and SAM2 for detection + segmentation.
+
+### Step 5: Auto-Label (Batch Predictions)
+
+Auto-labeling generates predictions for all tasks at once using the connected ML backend.
+
+**Method 1 — Automatic pre-labeling:**
+1. Go to **Settings > Annotation**
+2. Enable **"Use predictions to prelabel tasks"**
+3. Under **Live Predictions**, select which model to use
+4. Now when you open any task, predictions load automatically
+
+**Method 2 — Retrieve predictions on demand:**
+1. In the Data Manager, select tasks (checkbox on the left, or select all)
+2. Click the **Actions** dropdown
+3. Select **Retrieve Predictions**
+4. Predictions are fetched from the ML backend and stored on each task
+
+Predictions appear as **dashed outlines** in the labeling interface. They are read-only. To edit them, click a prediction to copy it into your annotation.
+
+### Step 6: Interactive Annotation (Smart Tools)
+
+Interactive annotation gives you real-time ML assistance as you label. This is the most powerful way to use the ML backends.
+
+**Enable it:**
+1. Make sure you checked **Interactive preannotations** when connecting the model (Step 4)
+2. Open a task by clicking on it, or click **Label All Tasks** to enter label stream mode
+3. In the labeling toolbar, toggle the **Auto-Annotation** switch (magic wand icon)
+
+#### YOLO — Auto-Detect Objects
+
+With YOLO connected and auto-annotation enabled:
+1. Open an image (e.g., `street-scene.png`)
+2. YOLO automatically detects objects and draws bounding boxes
+3. Review the predictions — accept, modify, or delete as needed
+4. Click **Submit** when done
+
+YOLO detects all 80 COCO classes. Only labels that match your labeling config are shown. Add more `<Label>` tags to your config to see more detections.
+
+#### Tesseract — Smart Rectangle OCR
+
+With Tesseract connected and auto-annotation enabled:
+1. Open a document image (e.g., `document-scan.png`)
+2. Select the **Text** label
+3. Draw a rectangle around any text region
+4. Tesseract automatically reads the text and fills the transcription field
+5. Review and correct the OCR text if needed
+6. Repeat for each text block, then **Submit**
+
+The `smart="true"` attribute on `<RectangleLabels>` enables this. Without it, you'd have to type text manually.
+
+#### EasyOCR — Smart Polygon OCR
+
+Similar to Tesseract but with polygon regions and better multilingual support:
+1. Open a document or sign image
+2. Select the **Text** label
+3. Draw a polygon or rectangle around text
+4. EasyOCR extracts the text automatically
+5. Configure languages via the `LANG_LIST` env var (default: `en`)
+
+#### MobileSAM / SAM2 — Click-to-Segment
+
+This is the most interactive workflow. Click on any object to get a pixel-perfect segmentation mask.
+
+1. Open an image (e.g., `aerial-view.png` or `shapes-objects.png`)
+2. Select **Positive** under KeyPointLabels
+3. Click on an object you want to segment
+4. SAM generates a brush mask around the object
+5. If the mask is too small, click another positive point on the missed area
+6. If the mask includes unwanted area, switch to **Negative** and click on that area
+7. The mask refines with each click
+8. When satisfied, click **Submit**
+
+**Tips for SAM segmentation:**
+- **Positive clicks** tell SAM "include this area"
+- **Negative clicks** tell SAM "exclude this area"
+- Start with one click in the center of the object
+- Add more clicks to refine edges
+- You can also draw a rectangle around the object for a rough initial mask
+- SAM2 produces higher quality masks than MobileSAM but requires a GPU
+- Works best on distinct objects with clear boundaries
+
+### Step 7: Manual Annotation Tools
+
+You can always annotate manually, with or without ML backends.
+
+#### Drawing Bounding Boxes
+1. Select the rectangle tool and a label
+2. Click and drag to draw a box, or click two opposite corners
+3. Resize by dragging corner handles
+4. Move by dragging the center
+5. To draw overlapping boxes: hold **Ctrl** (or **Cmd** on Mac) while clicking, or press the rectangle hotkey again
+
+#### Drawing Polygons
+1. Select the polygon tool and a label
+2. Click to place vertices
+3. Double-click to close the polygon
+4. Vertices can be adjusted after closing
+
+#### Brush Painting
+1. Select the brush tool and a label
+2. Paint over the region
+3. Use the eraser to remove parts (select the region first in the sidebar, then erase)
+4. Adjust brush size with the slider
+
+### Step 8: Review and Submit
+
+- **Submit** saves the annotation and advances to the next task
+- **Update** saves changes to an existing annotation
+- **Skip** moves to the next task without annotating
+- Use the **Outliner panel** (left sidebar) to see all regions, edit coordinates precisely, change labels, or delete regions
+- **Keyboard shortcuts:** Press **Ctrl+Enter** to submit, **Backspace** to delete selected region
+
+### Workflow Summary
+
+```
+┌─────────────┐    ┌──────────────┐    ┌──────────────────┐
+│ Create       │    │ Import       │    │ Connect ML       │
+│ Project      │───>│ Images       │───>│ Backend          │
+└─────────────┘    └──────────────┘    └──────────────────┘
+                                              │
+                         ┌────────────────────┼────────────────────┐
+                         │                    │                    │
+                         v                    v                    v
+                   ┌───────────┐     ┌──────────────┐    ┌──────────────┐
+                   │ Auto-Label│     │ Interactive  │    │ Manual       │
+                   │ (batch)   │     │ (smart tools)│    │ Annotation   │
+                   └───────────┘     └──────────────┘    └──────────────┘
+                         │                    │                    │
+                         └────────────────────┼────────────────────┘
+                                              v
+                                     ┌──────────────┐
+                                     │ Review &     │
+                                     │ Submit       │
+                                     └──────────────┘
+                                              │
+                                              v
+                                     ┌──────────────┐
+                                     │ Export       │
+                                     │ Annotations  │
+                                     └──────────────┘
+```
+
+### Exporting Annotations
+
+1. In the Data Manager, select tasks (or select all)
+2. Click **Export**
+3. Choose a format:
+   - **JSON** — Label Studio native format (recommended)
+   - **COCO** — standard for object detection
+   - **VOC** — Pascal VOC XML format
+   - **YOLO** — YOLO txt format
+4. Download the export file
+
+### Project Recipes
+
+Quick-start configurations for common workflows.
+
+#### Recipe: Document OCR Pipeline
+
+Set up a project to extract text from scanned documents.
+
+1. Create project named "Document OCR"
+2. Use the [Tesseract labeling config](#tesseract-ocr)
+3. Import images from `examples/images/` (document-scan.png, text-sign.png)
+4. Connect Tesseract at `http://localhost:9090` with interactive preannotations
+5. Open a task, enable Auto-Annotation, draw rectangles around text blocks
+6. Tesseract fills in the transcription automatically
+
+#### Recipe: Street Object Detection
+
+Detect cars, people, and objects in street images.
+
+1. Create project named "Street Detection"
+2. Use the [YOLO labeling config](#yolo-object-detection-v8v11) — add all labels you want to detect
+3. Import `street-scene.png` and `animals-park.png`
+4. Connect YOLO at `http://localhost:9091` with interactive preannotations
+5. Open a task — YOLO auto-detects objects
+6. Review bounding boxes, adjust labels, submit
+
+#### Recipe: Image Segmentation with SAM2
+
+Segment objects with pixel-perfect masks.
+
+1. Create project named "Image Segmentation"
+2. Use the [SAM2 labeling config](#sam2---segment-anything-2-extras-gpu-required) — add labels for your object classes
+3. Import `aerial-view.png` and `shapes-objects.png`
+4. Connect SAM2 at `http://localhost:9094` with interactive preannotations
+5. Open a task, enable Auto-Annotation, select Positive keypoint label
+6. Click on objects — SAM2 generates segmentation masks
+7. Use Negative clicks to exclude unwanted areas, submit when done
+
+#### Recipe: Full Pipeline (YOLO + SAM2)
+
+Use YOLO to find objects, then SAM2 to segment them precisely.
+
+1. Create project with both bounding box and segmentation labels:
+```xml
+<View>
+  <Image name="image" value="$image" zoom="true" zoomControl="true"/>
+  <RectangleLabels name="bbox" toName="image">
+    <Label value="person" background="red"/>
+    <Label value="car" background="blue"/>
+    <Label value="truck" background="green"/>
+  </RectangleLabels>
+  <BrushLabels name="segment" toName="image">
+    <Label value="person" background="red"/>
+    <Label value="car" background="blue"/>
+  </BrushLabels>
+  <KeyPointLabels name="kp" toName="image" smart="true">
+    <Label value="Positive" background="green"/>
+    <Label value="Negative" background="red"/>
+  </KeyPointLabels>
+</View>
+```
+2. Connect both YOLO (`http://localhost:9091`) and SAM2 (`http://localhost:9094`)
+3. YOLO provides bounding box predictions, SAM2 provides segmentation on click
+4. Review detections, click objects for precise masks, submit
+
+---
+
 ## Manual Setup
 
 All commands assume you're in the `labelstudio-local` directory.
@@ -351,17 +648,25 @@ hostname -I | awk '{print $1}'
 labelstudio-local/
 ├── Makefile
 ├── README.md
+├── examples/
+│   └── images/
+│       ├── street-scene.png     ← YOLO test (cars, people, traffic)
+│       ├── animals-park.png     ← YOLO test (dog, cat, horse, bird)
+│       ├── shapes-objects.png   ← YOLO test (bottle, cup, apple, clock)
+│       ├── document-scan.png    ← OCR test (invoice with text)
+│       ├── text-sign.png        ← OCR test (sign with text)
+│       └── aerial-view.png      ← SAM test (buildings, roads)
 ├── scripts/
 │   ├── setup.sh
 │   ├── start.sh
 │   ├── stop.sh
 │   └── health.sh
-├── label-studio-ml-backend/
+├── label-studio-ml-backend/   (cloned at setup)
 │   └── label_studio_ml/examples/
 │       ├── tesseract/
 │       └── yolo/
 │           └── models/
-│               ├── yolo11n.pt  ← included
-│               └── yolov8n.pt  ← included
+│               ├── yolo11n.pt   ← included
+│               └── yolov8n.pt   ← included
 └── data/  (created at runtime)
 ```
