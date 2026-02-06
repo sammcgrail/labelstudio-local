@@ -244,7 +244,7 @@ pkill -f "gunicorn.*9091"
 
 ## Troubleshooting
 
-**Label Studio slow to start:** First startup takes 1-2 minutes for database init.
+**Label Studio slow to start:** Label Studio takes 1-2 minutes to start up. It initializes the database, checks PyPI for updates, and runs migrations. Wait until you see `Starting development server at http://0.0.0.0:8080/` in the console before opening the browser. The ML backends (Tesseract and YOLO) start much faster.
 
 **Check health:**
 ```bash

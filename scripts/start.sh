@@ -31,6 +31,14 @@ sleep 3
 
 # Start Label Studio in foreground
 echo "Starting Label Studio (port 8080)..."
+echo ""
+echo "NOTE: Label Studio takes 1-2 minutes to start on first load."
+echo "      Wait until you see 'Starting development server' before opening the browser."
+echo ""
+echo "  Label Studio: http://localhost:8080"
+echo "  Tesseract:    http://localhost:9090"
+echo "  YOLO:         http://localhost:9091"
+echo ""
 echo "Press Ctrl+C to stop all services"
 source .venv/bin/activate
 label-studio start --port 8080
