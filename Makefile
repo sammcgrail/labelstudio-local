@@ -1,3 +1,4 @@
+SHELL := /bin/bash
 .PHONY: setup setup-labelstudio setup-tesseract setup-yolo start stop health clean
 
 # Detect OS
@@ -12,7 +13,7 @@ all: setup
 # Setup targets
 #
 
-setup: setup-labelstudio setup-tesseract setup-yolo
+setup: setup-labelstudio setup-ml-backend setup-tesseract setup-yolo
 	@echo ""
 	@echo "=== Setup Complete ==="
 	@echo "Run 'make start' to start all services"
@@ -21,6 +22,14 @@ setup-labelstudio:
 	@echo "=== Setting up Label Studio ==="
 	uv venv .venv
 	. .venv/bin/activate && uv pip install label-studio
+
+setup-ml-backend:
+	@echo "=== Cloning ML Backend Repository ==="
+	@if [ ! -d "label-studio-ml-backend" ]; then \
+		git clone https://github.com/HumanSignal/label-studio-ml-backend.git; \
+	else \
+		echo "ML backend repo already exists"; \
+	fi
 
 setup-tesseract:
 	@echo "=== Setting up Tesseract OCR Backend ==="
